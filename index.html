@@ -164,7 +164,40 @@ function switchService(service){
  document.getElementById("cansCatalog").classList.toggle("hide",service!=="cans");
  document.getElementById("tankerCatalog").classList.toggle("hide",service!=="tankers");
 }
-function bookTanker(id){
+function bookTanker(id){async function bookTanker(id){
+  const p=providers.find(x=>x.id===id);
+  if(!p){toast("Tanker provider not found");return;}
+  const qty=prompt("How many tanker trips do you need? Enter a number:", "1");
+  if(qty===null)return;
+  const n=Number(qty);
+  if(!Number.isInteger(n)||n<1||n>50){
+    toast("Please enter a quantity from 1 to 50");
+    return;
+  }
+  const zone=document.getElementById("zoneSelect").value;
+  const booking={
+    provider:p.name,
+    capacity:p.capacity,
+    water_type:p.type,
+    zone:zone,
+    price:p.price*n,
+    quantity:n,
+    status:"Booking requested"
+  };
+  try {
+    const {data,error}=await watergoDb.from("tanker_bookings")
+      .insert(booking)
+      .select("id,provider,capacity,water_type,zone,price,quantity,status,created_at")
+      .single();
+    if(error)throw error;
+    tankerBookings.unshift({...data,qty:data.quantity,type:data.water_type});
+    renderWorkspace();
+    toast("Tanker request #WG"+String(data.id).slice(0,6).toUpperCase()+" saved");
+  } catch(error) {
+    console.error("Tanker booking save failed:",error);
+    toast("Booking not saved: "+(error.message||"Check Supabase table setup"));
+  }
+}
  const p=providers.find(x=>x.id===id);
  const qty=prompt("How many tanker trips do you need? Enter a number:", "1");
  if(qty===null)return;
@@ -212,7 +245,7 @@ function statusClass(s){return s==="Delivered"?"status":s==="Out for delivery"?"
 function customerView(){return `<div class="panel-head"><div><h2>Your cart & orders</h2><p>Review your items and follow order progress.</p></div><span class="pill">${cartQty()} item${cartQty()===1?"":"s"} in cart</span></div>
 <div class="stats"><div class="stat"><div class="label">Cart subtotal</div><div class="num">${money(total())}</div></div><div class="stat"><div class="label">Active orders</div><div class="num">${orders.filter(o=>o.status!=="Delivered").length}</div></div><div class="stat"><div class="label">Orders placed</div><div class="num">${orders.length}</div></div></div>
 ${cartQty()?`<div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>${products.filter(p=>cart[p.id]).map(p=>`<tr><td>${p.name}</td><td><button class="mini" onclick="changeQty(${p.id},-1)">−</button> &nbsp;${cart[p.id]}&nbsp; <button class="mini" onclick="changeQty(${p.id},1)">+</button></td><td>${money(p.price*cart[p.id])}</td><td><button class="mini" onclick="changeQty(${p.id},-${cart[p.id]})">Remove</button></td></tr>`).join("")}</tbody></table></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:16px"><label style="font-size:13px;font-weight:700">Your name<input id="customerName" autocomplete="name" required placeholder="Full name" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;font:inherit"></label><label style="font-size:13px;font-weight:700">Phone number<input id="customerPhone" autocomplete="tel" inputmode="tel" required placeholder="Mobile number" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;font:inherit"></label><label style="font-size:13px;font-weight:700;grid-column:1/-1">Delivery address<input id="deliveryAddress" autocomplete="street-address" required placeholder="House no., street, landmark" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;font:inherit"></label></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px"><span class="muted" style="font-size:12px">Test orders only. No payment or delivery confirmation is connected.</span><button class="btn btn-primary" onclick="orderNow()">Place order · ${money(total())}</button></div>`:`<div class="empty"><div style="font-size:35px">🛒</div><strong>Your cart is waiting for a drop.</strong><p>Add water cans or bottle packs above to place a demo order.</p><button class="btn btn-soft" onclick="document.getElementById('catalog').scrollIntoView({behavior:'smooth'})">Browse products</button></div>`}
-${tankerBookings.length?`<div style="margin-top:22px"><h3 style="margin:0 0 10px">Tanker booking requests</h3><div class="table-wrap"><table><thead><tr><th>Booking</th><th>Provider</th><th>Capacity</th><th>Area</th><th>Total</th><th>Status</th></tr></thead><tbody>${tankerBookings.map(b=>`<tr><td>#WG${b.id}</td><td>${b.provider}</td><td>${b.qty} × ${b.capacity}</td><td>${b.zone}</td><td>${money(b.price)}</td><td><span class="status pending">${b.status}</span></td></tr>`).join("")}</tbody></table></div></div>`:""}${orders.length?`<div style="margin-top:25px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h3 style="margin:0">Recent orders</h3><button id="refreshCustomerOrders" class="btn btn-outline" onclick="refreshCustomerOrders()">Refresh order status</button></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Items</th><th>Area</th><th>Total</th><th>Status</th></tr></thead><tbody>${orders.map(o=>`<tr><td>#WG${orderLabel(o)}<div class="muted" style="font-size:11px">${o.time}</div></td><td>${o.items.map(i=>i.qty+"× "+i.name).join(", ")}</td><td>${o.zone}</td><td>${money(o.total)}</td><td><span class="${statusClass(o.status)}">${o.status}</span></td></tr>`).join("")}</tbody></table></div></div>`:""}`}
+${tankerBookings.length?`<div style="margin-top:22px"><h3 style="margin:0 0 10px">Tanker booking requests</h3><div class="table-wrap"><table><thead><tr><th>Booking</th><th>Provider</th><th>Capacity</th><th>Area</th><th>Total</th><th>Status</th></tr></thead><tbody>${tankerBookings.map(b=>`<tr><td>#WG${String(b.id).slice(0,6).toUpperCase()}</td><td>${b.provider}</td><td>${b.qty} × ${b.capacity}</td><td>${b.zone}</td><td>${money(b.price)}</td><td><span class="status pending">${b.status}</span></td></tr>`).join("")}</tbody></table></div></div>`:""}${orders.length?`<div style="margin-top:25px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h3 style="margin:0">Recent orders</h3><button id="refreshCustomerOrders" class="btn btn-outline" onclick="refreshCustomerOrders()">Refresh order status</button></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Items</th><th>Area</th><th>Total</th><th>Status</th></tr></thead><tbody>${orders.map(o=>`<tr><td>#WG${orderLabel(o)}<div class="muted" style="font-size:11px">${o.time}</div></td><td>${o.items.map(i=>i.qty+"× "+i.name).join(", ")}</td><td>${o.zone}</td><td>${money(o.total)}</td><td><span class="${statusClass(o.status)}">${o.status}</span></td></tr>`).join("")}</tbody></table></div></div>`:""}`}
 function supplierView(){return `<div class="panel-head"><div><h2>Supplier dashboard</h2><p>Register your business, then manage orders assigned by WaterGo Admin.</p></div><span class="pill">Supplier</span></div><div id="wgSupplierContent">${roleLoginPanel()}</div>`}
 async function loadSupplierDashboard(){const host=document.getElementById("wgSupplierContent");if(!host)return;const {data:{session}}=await watergoDb.auth.getSession();if(!session){host.innerHTML=roleLoginPanel();return}try{const [profileResult,assignmentResult]=await Promise.all([watergoApi("my-profile"),watergoApi("my-assignments")]);const p=profileResult.supplier;const rows=assignmentResult.assignments||[];const orderMap=new Map(orders.map(o=>[String(o.id),o]));host.innerHTML=p?`<div class="stats"><div class="stat"><div class="label">Business</div><div class="num" style="font-size:18px">${p.business_name}</div></div><div class="stat"><div class="label">Application status</div><div class="num" style="font-size:18px">${p.status}</div></div><div class="stat"><div class="label">Assigned orders</div><div class="num">${rows.filter(a=>a.role==="supplier").length}</div></div></div>${p.status!=="approved"?`<p class="muted">Your profile is awaiting admin verification. You cannot receive orders until approved.</p>`:""}${rows.filter(a=>a.role==="supplier").map(a=>{const o=orderMap.get(String(a.order_id));return `<div class="order-card" style="border:1px solid var(--line);padding:14px;border-radius:10px;margin:10px 0"><b>Order #${orderLabel(o||{id:a.order_id})}</b><p>${o?o.items.map(i=>i.qty+"× "+i.name).join(", ")+" · "+o.zone:"Order details loading"}</p><p>Status: <b>${a.status}</b></p>${a.status==="assigned"?`<button class="mini dark" onclick="updateWaterGoAssignment('${a.id}','accepted')">Accept</button> <button class="mini" onclick="updateWaterGoAssignment('${a.id}','declined')">Decline</button>`:a.status==="accepted"?`<button class="mini dark" onclick="updateWaterGoAssignment('${a.id}','ready')">Mark ready</button>`:""}</div>`}).join("")}`:`<h3>Supplier registration</h3><div style="display:grid;gap:10px;max-width:620px"><label>Business name<input id="wgBusinessName" style="display:block;width:100%;padding:11px;border:1px solid var(--line);border-radius:8px"></label><label>Phone<input id="wgSupplierPhone" type="tel" style="display:block;width:100%;padding:11px;border:1px solid var(--line);border-radius:8px"></label><label>Service areas</label><div>${areaChecks("wgSupplierArea")}</div><label>Additional details<textarea id="wgSupplierNotes" rows="3" style="display:block;width:100%;padding:11px;border:1px solid var(--line);border-radius:8px"></textarea></label><button class="btn btn-primary" onclick="submitSupplierProfile()">Submit supplier registration</button></div>`}catch(e){host.innerHTML=`<p class="muted">${e.message}</p>`}}
 function deliveryView(){return `<div class="panel-head"><div><h2>Delivery partner dashboard</h2><p>Register, get verified and update only your assigned deliveries.</p></div><span class="pill">Delivery partner</span></div><div id="wgDeliveryContent">${roleLoginPanel()}</div>`}
@@ -232,7 +265,13 @@ window.addEventListener("focus",()=>{loadOrders(false)});
 window.setInterval(()=>{if(document.visibilityState==="visible")loadOrders(false)},15000);
 document.querySelectorAll(".filter").forEach(b=>b.addEventListener("click",()=>{filter=b.dataset.filter;document.querySelectorAll(".filter").forEach(x=>x.classList.toggle("active",x===b));renderProducts()}));
 document.getElementById("zoneSelect").addEventListener("change",e=>{const val=e.target.value;document.getElementById("zoneLabel").textContent=val.split(" / ")[0];toast("Delivery area set to "+val);});
-(async()=>{await refreshAdminSession();renderProducts();renderTankers();renderWorkspace();await loadOrders(true);})();
+(async()=>{await refreshAdminSession();renderProducts();renderTankers();renderWorkspace();await loadOrders(true)(async()=>{
+  await refreshAdminSession();
+  renderProducts();
+  renderTankers();
+  await Promise.all([loadOrders(true),loadTankerBookings()]);
+  renderWorkspace();
+})();;})();
 </script>
 </body>
 </html>
