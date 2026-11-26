@@ -136,6 +136,19 @@ function art(p){return `<div class="product-art"><span class="tag">${p.tag}</spa
 
 let activeService="cans";
 let tankerBookings=[];
+  async function loadTankerBookings(){
+  try {
+    const {data,error}=await watergoDb.from("tanker_bookings")
+      .select("id,provider,capacity,water_type,zone,price,quantity,status,created_at")
+      .order("created_at",{ascending:false}).limit(50);
+    if(error) throw error;
+    tankerBookings=(data||[]).map(b=>({...b,qty:b.quantity,type:b.water_type}));
+    return true;
+  } catch(error) {
+    console.error("Tanker bookings load failed:",error);
+    return false;
+  }
+}
 let providers=[
 {id:1,name:"Sri Sai Water Tankers",capacity:"5,000 litres",type:"Construction water",zone:"Kukatpally / KPHB",price:900,availability:"Available now"},
 {id:2,name:"City Aqua Supply",capacity:"2,000 litres",type:"General-use water",zone:"Madhapur / HITEC City",price:650,availability:"Available now"},
