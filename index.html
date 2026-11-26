@@ -80,7 +80,7 @@
 // WaterGo Supabase connection. The publishable key is intended for browser use; keep RLS enabled.
 const SUPABASE_URL = "https://fmdzqkykhzedctviewyw.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtZHpxa3lraHplZGN0dmlld3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NzE1ODcsImV4cCI6MjEwNzQ0NzU4N30.QCcmsL1rrLyfRVXuZgikFdWh42BomXolgPAyHfcV8aQ"
-const watergoDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { global: { fetch: (url, options={}) => fetch(url, { ...options, cache: "no-store", headers: { ...(options.headers || {}), "Cache-Control": "no-cache, no-store, max-age=0", "Pragma": "no-cache" } }) } });
+const watergoDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const products=[
 {id:1,name:"20L Water Can",desc:"Reusable jar · purified drinking water",price:35,unit:"per can",kind:"cans",tag:"BESTSELLER",supplier:"AquaFresh Water Point",art:"big"},
 {id:2,name:"20L Premium Can",desc:"Mineral water · returnable jar",price:50,unit:"per can",kind:"cans",tag:"PREMIUM",supplier:"BlueDrop Distributors",art:"big"},
